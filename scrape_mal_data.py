@@ -1,28 +1,50 @@
 from bs4 import BeautifulSoup
 import requests
+import re
 
+# gets the synopsis of the anime
 def get_desc(page):
     description = page.find("span", itemprop="description").text   
     return description.replace("[Written by MAL Rewrite]","").strip()
 
+# gets name of the anime
 def get_title(page):
     return page.find("span", itemprop="name").text
 
+# converts a comma separated string into a list of the items
+def convert_str_to_list(str):
+    return [x.strip() for x in str.split(',')]
+
+# clean values from sidebar
+def clean_value(key, value):
+    if key in ['Genres', 'Studios', 'Producers', 'Licensors', 'Synonyms']:
+        value = convert_str_to_list(value)
+    elif key in ['Score', 'Ranked']:
+        value = re.findall(r"[-+]?\d*\.\d+|\d+", value)[0]
+    elif key == 'Popularity':
+        value = value.replace("#","")
+    return value       
+
 # scrape information from sidebar
-# TODO: Handle and clean specific items in the sidebar that have extra text
-def get_information(page):
+def get_sidebar_information(page):
     info = {}
+    # get sidebar element then get all the div tags in the sidebar
     sidebar = page.find("td", class_="borderClass")
     children = sidebar.find_all("div")
     for i in range(len(children)):
         child = children[i]
-        key = child.find("span")
-        if key in child:
+        # check if the div has information
+        info_tag = child.find("span")
+        if info_tag in child:
+                # extract the information and add it to the dictionary
                 items = child.text.split(":")
                 key = items[0].strip()
                 value = items[1].strip()
-                info[key] = value
+                value = clean_value(key, value)
+                if "* Your list is public by default." not in key:
+                        info[key] = value
     return info
+
 def scrape_url(page_link, anime_id):
     page_response = requests.get(page_link, timeout=5)
     try :
@@ -34,22 +56,21 @@ def scrape_url(page_link, anime_id):
         # parse html content
         anime_data['Title'] = get_title(page_content)
         anime_data['Description'] = get_desc(page_content)
-        information = get_information(page_content)
+        information = get_sidebar_information(page_content)
         anime_data.update(information)
-        #TODO: write values to text file
+        #TODO: write values to file
         for key, value in anime_data.items():
-                print(key + ": " + value)
+                print(key)
+                print(value)
+                print("=====================")
     except Exception as e:
         print("Something went wrong for anime #" + str(anime_id) + "\n")
         print(str(e))
 
 def main():
-#     for i in range(1, 10):
-#         anime_id = i
-#         scrape_url('https://myanimelist.net/anime/' + str(anime_id), anime_id)
-
-    # run on one url for testing script
-    anime_id = 20
-    anime_url = 'https://myanimelist.net/anime/' + str(anime_id)
-    scrape_url(anime_url, anime_id)
+    for i in range(1, 10):
+        anime_id = i
+        scrape_url('https://myanimelist.net/anime/' + str(anime_id), anime_id)
+        print("========================")
+        print("========================")
 main()
