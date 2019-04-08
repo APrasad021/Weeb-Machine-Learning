@@ -18,9 +18,9 @@ def convert_str_to_list(str):
 # clean values from sidebar
 def clean_value(key, value):
     if key in ['Genres', 'Studios', 'Producers', 'Licensors', 'Synonyms']:
-        value = convert_str_to_list(value)
+        value = "N/A" if "None found" in value else convert_str_to_list(value)
     elif key in ['Score', 'Ranked']:
-        value = re.findall(r"[-+]?\d*\.\d+|\d+", value)[0]
+        value = "N/A" if "N/A" in value else re.findall(r"[-+]?\d*\.\d+|\d+", value)[0]
     elif key == 'Popularity':
         value = value.replace("#","")
     return value       
@@ -45,7 +45,9 @@ def get_sidebar_information(page):
                         info[key] = value
     return info
 
+# tries to scrape a potential mal anime entry webpage
 def scrape_url(page_link, anime_id):
+    # TODO: Fix 429 error (too many requests for url)
     page_response = requests.get(page_link, timeout=5)
     try :
         anime_data = {}
@@ -64,13 +66,15 @@ def scrape_url(page_link, anime_id):
                 print(value)
                 print("=====================")
     except Exception as e:
-        print("Something went wrong for anime #" + str(anime_id) + "\n")
-        print(str(e))
+        if page_response.status_code == 404:
+                print("Anime #" + str(anime_id) + " does not exist")
+        else:
+                print("Something went wrong for anime #" + str(anime_id) + "\n")
+                print(str(e))
 
 def main():
     for i in range(1, 10):
         anime_id = i
         scrape_url('https://myanimelist.net/anime/' + str(anime_id), anime_id)
-        print("========================")
         print("========================")
 main()
