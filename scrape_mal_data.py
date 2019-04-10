@@ -1,6 +1,7 @@
 from bs4 import BeautifulSoup
 import requests
 import re
+# scrape mal data of anime to be able to reference the data later
 
 # gets the synopsis of the anime
 def get_desc(page):
@@ -46,7 +47,7 @@ def get_sidebar_information(page):
     return info
 
 # tries to scrape a potential mal anime entry webpage
-def scrape_url(page_link, anime_id):
+def scrape_anime_url(page_link, anime_id):
     # TODO: Fix 429 error (too many requests for url)
     page_response = requests.get(page_link, timeout=5)
     try :
@@ -56,6 +57,7 @@ def scrape_url(page_link, anime_id):
         # if anime exists, get the html from the page
         page_content = BeautifulSoup(page_response.content, "html.parser")
         # parse html content
+        anime_data['anime_id'] = anime_id
         anime_data['Title'] = get_title(page_content)
         anime_data['Description'] = get_desc(page_content)
         information = get_sidebar_information(page_content)
@@ -75,6 +77,6 @@ def scrape_url(page_link, anime_id):
 def main():
     for i in range(1, 10):
         anime_id = i
-        scrape_url('https://myanimelist.net/anime/' + str(anime_id), anime_id)
+        scrape_anime_url('https://myanimelist.net/anime/' + str(anime_id), anime_id)
         print("========================")
 main()
