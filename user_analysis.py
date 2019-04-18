@@ -15,7 +15,7 @@ def get_watched_anime(username):
         # These are all the known Statuses (Not sure what 'status' = 5 represents)
         anime_status = ["Watching", "Completed", "On Hold", "Dropped", "idk", "Plan to Watch"]
         
-        # TODO: Tweak anime anime entries if needed
+        # TODO: Keep only data that is needed
         # for entry in anime_entries:
         #     print(entry['anime_title'], entry['anime_id'], anime_status[entry['status']-1], entry['score']) 
         return anime_entries

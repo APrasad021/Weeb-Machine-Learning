@@ -1,12 +1,17 @@
 from bs4 import BeautifulSoup
 import requests
 import re
+import csv
+import json
+from time import sleep
 # scrape mal data of anime to be able to reference the data later
 
 # gets the synopsis of the anime
 def get_desc(page):
-    description = page.find("span", itemprop="description").text   
-    return description.replace("[Written by MAL Rewrite]","").strip()
+    if page.find("span", itemprop="description") != None:
+        description = page.find("span", itemprop="description").text   
+        return description.replace("[Written by MAL Rewrite]","").strip()
+    return "No description has been added to this title."
 
 # gets name of the anime
 def get_title(page):
@@ -48,8 +53,7 @@ def get_sidebar_information(page):
 
 # tries to scrape a potential mal anime entry webpage
 def scrape_anime_url(page_link, anime_id):
-    # TODO: Fix 429 error (too many requests for url)
-    page_response = requests.get(page_link, timeout=5)
+    page_response = requests.get(page_link, headers = {'User-agent': 'your bot 0.1'})
     try :
         anime_data = {}
         # if the anime doesn't exist, an error will be raised
@@ -58,25 +62,54 @@ def scrape_anime_url(page_link, anime_id):
         page_content = BeautifulSoup(page_response.content, "html.parser")
         # parse html content
         anime_data['anime_id'] = anime_id
+        anime_data['Exists'] = True
         anime_data['Title'] = get_title(page_content)
         anime_data['Description'] = get_desc(page_content)
         information = get_sidebar_information(page_content)
         anime_data.update(information)
-        #TODO: write values to file
-        for key, value in anime_data.items():
-                print(key)
-                print(value)
-                print("=====================")
+        return anime_data
+    # Error handling
     except Exception as e:
         if page_response.status_code == 404:
-                print("Anime #" + str(anime_id) + " does not exist")
+            return None
         else:
-                print("Something went wrong for anime #" + str(anime_id) + "\n")
-                print(str(e))
+            print(str(e))
+            return {'anime_id': anime_id, 'Exists': False, 'Description': str(e)}
+            
+
+# def write_valid_row(data):
+#     with open('mal_db_data.json', 'a', encoding='utf-8') as fp:
+#         json.dump(data, fp)
+
+# def write_invalid_row(anime_id, error_str):
+#     fieldnames = ['anime_id', 'Exists', 'Description']
+#     with open('mal_db_data.json', 'a', encoding='utf-8') as fp:
+#         json.dump({'anime_id': anime_id, 'Exists': False, 'Description': error_str}, fp)
+
+def scrape_urls_from_file(filename):
+    try:
+        urls = open(filename, "r", encoding='utf-8').read().strip().split("\n")
+        data = []
+        for url in urls:
+            anime_id = int(url.split("/")[-2])
+            info = scrape_anime_url(url, anime_id)
+            if info != None:
+                data.append(info)
+            sleep(.5)
+        write_json_data(data, 'mal_db_data.json')
+    except Exception as e:
+        print(str(e))
+
+def write_json_data(data, filename):
+    with open(filename, 'w', encoding='utf-8') as fp:
+        json.dump(data, fp)
 
 def main():
+    data = []
     for i in range(1, 10):
         anime_id = i
-        scrape_anime_url('https://myanimelist.net/anime/' + str(anime_id), anime_id)
-        print("========================")
-main()
+        info = scrape_anime_url('https://myanimelist.net/anime/' + str(anime_id), anime_id)
+        if info != None:
+            data.append(info)
+
+scrape_urls_from_file("top_anime_urls.txt")
